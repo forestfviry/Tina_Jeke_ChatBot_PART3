@@ -28,6 +28,8 @@ namespace switch_grid
         // task manager instance
         private TaskManager task_manager = new TaskManager();
 
+        // quiz manager instance
+        private QuizManager quiz_manager = new QuizManager();
         public MainWindow()
         {//start of constructor
             InitializeComponent();
