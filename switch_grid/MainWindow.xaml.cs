@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Windows.Media;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -7,6 +6,7 @@ using System.Media;
 using System.Text;
 using System.Windows;
 using System.Drawing;
+using System.Windows.Media;
 
 namespace switch_grid
 {
@@ -69,7 +69,7 @@ namespace switch_grid
                         {//start of outer loop
                             for (int width = 0; width < resizedImage.Width; width++)
                             {//start of inner loop
-                                Color pixelColor = resizedImage.GetPixel(width, height);
+                                System.Drawing.Color pixelColor = resizedImage.GetPixel(width, height);
                                 int colorValue = (pixelColor.R + pixelColor.G + pixelColor.B) / 3;
                                 char ascii_design = colorValue > 200 ? '.' : colorValue > 150 ? '*' : colorValue > 100 ? 'O' : colorValue > 50 ? '#' : '@';
                                 asciiBuilder.Append(ascii_design);
@@ -354,6 +354,124 @@ namespace switch_grid
             tasks_grid.Visibility = Visibility.Hidden;
             chats_grid.Visibility = Visibility.Visible;
         }//end of back_to_chat
+        // ── QUIZ MINI-GAME METHODS ────────────────────────────────────────
+
+        private void open_quiz()
+        {
+            chats_grid.Visibility = Visibility.Hidden;
+            quiz_grid.Visibility = Visibility.Visible;
+            quiz_manager.StartNewQuiz(10);
+            quiz_score_text.Visibility = Visibility.Collapsed;
+            quiz_next_button.Visibility = Visibility.Collapsed;
+            quiz_option_a.Visibility = Visibility.Visible;
+            quiz_option_b.Visibility = Visibility.Visible;
+            quiz_option_c.Visibility = Visibility.Visible;
+            quiz_option_d.Visibility = Visibility.Visible;
+            display_current_question();
+        }
+
+        private void display_current_question()
+        {
+            QuizQuestion current = quiz_manager.GetCurrentQuestion();
+            if (current == null)
+            {
+                show_final_score();
+                return;
+            }
+
+            quiz_progress_text.Text = "Question " + quiz_manager.GetCurrentQuestionNumber() + " of " + quiz_manager.GetTotalQuestions();
+            quiz_question_text.Text = current.QuestionText;
+            quiz_feedback_text.Text = "";
+            quiz_next_button.Visibility = Visibility.Collapsed;
+
+            quiz_option_a.Content = current.Options[0];
+            quiz_option_b.Content = current.Options[1];
+
+            if (current.Type == QuestionType.MultipleChoice)
+            {
+                quiz_option_c.Content = current.Options[2];
+                quiz_option_d.Content = current.Options[3];
+                quiz_option_c.Visibility = Visibility.Visible;
+                quiz_option_d.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                quiz_option_c.Visibility = Visibility.Collapsed;
+                quiz_option_d.Visibility = Visibility.Collapsed;
+            }
+
+            quiz_option_a.IsEnabled = true;
+            quiz_option_b.IsEnabled = true;
+            quiz_option_c.IsEnabled = true;
+            quiz_option_d.IsEnabled = true;
+        }
+
+        private void quiz_answer_selected(object sender, RoutedEventArgs e)
+        {
+            System.Windows.Controls.Button clicked = sender as System.Windows.Controls.Button;
+            if (clicked == null) return;
+
+            QuizQuestion current = quiz_manager.GetCurrentQuestion();
+            if (current == null) return;
+
+            string chosen_answer = current.Type == QuestionType.TrueFalse ? clicked.Content.ToString() : clicked.Tag.ToString();
+            bool is_correct = quiz_manager.SubmitAnswer(chosen_answer);
+
+            quiz_option_a.IsEnabled = false;
+            quiz_option_b.IsEnabled = false;
+            quiz_option_c.IsEnabled = false;
+            quiz_option_d.IsEnabled = false;
+
+            if (is_correct)
+            {
+                quiz_feedback_text.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xFF, 0x88));
+                quiz_feedback_text.Text = "✓ Correct! " + current.Explanation;
+            }
+            else
+            {
+                quiz_feedback_text.Foreground = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x44, 0x44));
+                quiz_feedback_text.Text = "✗ Incorrect. " + current.Explanation;
+            }
+
+            quiz_next_button.Visibility = Visibility.Visible;
+        }
+
+        private void quiz_next_question(object sender, RoutedEventArgs e)
+        {
+            bool has_more = quiz_manager.MoveNext();
+            if (has_more)
+                display_current_question();
+            else
+                show_final_score();
+        }
+
+        private void show_final_score()
+        {
+            quiz_question_text.Text = "Quiz complete!";
+            quiz_progress_text.Text = "";
+            quiz_option_a.Visibility = Visibility.Collapsed;
+            quiz_option_b.Visibility = Visibility.Collapsed;
+            quiz_option_c.Visibility = Visibility.Collapsed;
+            quiz_option_d.Visibility = Visibility.Collapsed;
+            quiz_next_button.Visibility = Visibility.Collapsed;
+            quiz_feedback_text.Text = "";
+
+            int score = quiz_manager.GetScore();
+            int total = quiz_manager.GetTotalQuestions();
+            quiz_score_text.Visibility = Visibility.Visible;
+            quiz_score_text.Text = "Your score: " + score + " / " + total + "\n" + quiz_manager.GetFinalFeedback();
+        }
+
+        private void quiz_play_again(object sender, RoutedEventArgs e)
+        {
+            open_quiz();
+        }
+
+        private void quiz_back_to_chat(object sender, RoutedEventArgs e)
+        {
+            quiz_grid.Visibility = Visibility.Hidden;
+            chats_grid.Visibility = Visibility.Visible;
+        }
 
     }//end of class
 }//end of namespace
