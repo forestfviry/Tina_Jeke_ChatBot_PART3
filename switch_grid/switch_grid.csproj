@@ -105,6 +105,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="ActivityLogManager.cs" />
     <Compile Include="QuizManager.cs" />
     <Compile Include="SentimentDetector.cs" />
     <Compile Include="TaskManager.cs" />
