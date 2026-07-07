@@ -157,6 +157,12 @@ namespace switch_grid
                 return "Opening task manager...";
             }//end of tasks if
 
+            // open quiz mini-game
+            if (lower_input.Contains("quiz") || lower_input.Contains("mini game") || lower_input.Contains("mini-game") || lower_input.Contains("test my knowledge"))
+            {
+                open_quiz();
+                return "Opening the cybersecurity quiz...";
+            }
             // memory: store favourite topic
             if (lower_input.Contains("i'm interested in") || lower_input.Contains("my favourite topic is"))
             {//start of memory if
