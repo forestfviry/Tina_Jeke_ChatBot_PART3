@@ -30,6 +30,10 @@ namespace switch_grid
 
         // quiz manager instance
         private QuizManager quiz_manager = new QuizManager();
+
+        //activity log instance
+        // activity log manager instance
+        private ActivityLogManager activity_log = new ActivityLogManager();
         public MainWindow()
         {//start of constructor
             InitializeComponent();
