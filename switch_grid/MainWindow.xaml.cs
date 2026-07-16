@@ -31,7 +31,6 @@ namespace switch_grid
         // quiz manager instance
         private QuizManager quiz_manager = new QuizManager();
 
-        //activity log instance
         // activity log manager instance
         private ActivityLogManager activity_log = new ActivityLogManager();
         public MainWindow()
@@ -125,6 +124,7 @@ namespace switch_grid
                 chats_list.Items.Add("CyberGuard : Hello " + stored_username + "! Let's secure your perimeter.");
                 chats_list.Items.Add("CyberGuard : Ask me about: passwords, phishing, firewall, vpn, fraud, malware.");
                 chats_list.Items.Add("CyberGuard : Type 'tasks' to open the task manager.");
+                chats_list.Items.Add("CyberGuard : Type 'show activity log' anytime to see what I've done for you.");
                 chats_list.Items.Add("──────────────────────────────────────────");
             }//end of if
             else
@@ -141,7 +141,15 @@ namespace switch_grid
             {//start of if
                 chats_list.Items.Add(stored_username + " : " + user_input);
                 string response = get_response(user_input);
-                chats_list.Items.Add("CyberGuard : " + response);
+
+                // multi-line responses (e.g. the activity log) are split so each
+                // line appears as its own chat entry instead of one squashed item
+                string[] response_lines = response.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                foreach (string line in response_lines)
+                {//start of foreach
+                    chats_list.Items.Add("CyberGuard : " + line);
+                }//end of foreach
+
                 chats_list.Items.Add("──────────────────────────────────────────");
                 question.Clear();
                 chats_list.ScrollIntoView(chats_list.Items[chats_list.Items.Count - 1]);
@@ -151,6 +159,12 @@ namespace switch_grid
         private string get_response(string user_input)
         {//start of get_response
             string lower_input = user_input.ToLower();
+
+            // activity log request
+            if (lower_input.Contains("show activity log") || lower_input.Contains("activity log") || lower_input.Contains("what have you done for me") || lower_input.Contains("what have you done"))
+            {//start of activity log if
+                return activity_log.FormatLog(10);
+            }//end of activity log if
 
             // open task manager
             if (lower_input.Contains("tasks") || lower_input.Contains("task manager") || lower_input.Contains("add task") || lower_input.Contains("my tasks"))
@@ -174,6 +188,7 @@ namespace switch_grid
                     lower_input.Replace("i'm interested in", "").Trim() :
                     lower_input.Replace("my favourite topic is", "").Trim();
                 stored_topic = topic;
+                activity_log.LogAction("NLP: noted user interest in '" + stored_topic + "'");
                 return "Great! I'll remember that you're interested in " + stored_topic + ". It's a crucial part of staying safe online.";
             }//end of memory if
 
@@ -201,6 +216,7 @@ namespace switch_grid
                 string sentiment_response = sentiment_detector.GetSentimentResponse(sentiment);
                 last_keyword = sentiment.ToString().ToLower();
                 string auto_tip = get_auto_tip(lower_input);
+                activity_log.LogAction("NLP: detected '" + sentiment + "' sentiment, responded with a tip");
                 if (auto_tip != "")
                     return sentiment_response + auto_tip;
                 return sentiment_response;
@@ -219,6 +235,7 @@ namespace switch_grid
                     if (cleaned_word.Contains(keyword) || keyword.Contains(cleaned_word))
                     {//start of match if
                         last_keyword = keyword;
+                        activity_log.LogAction("NLP: answered a query about '" + keyword + "'");
                         return get_answer_by_keyword(keyword);
                     }//end of match if
                 }//end of inner foreach
@@ -297,6 +314,7 @@ namespace switch_grid
                 if (success)
                 {//start of success if
                     MessageBox.Show("Task added! Reminder set for: " + reminder.ToShortDateString());
+                    activity_log.LogAction("Task added: '" + title + "' (Reminder set for " + reminder.ToShortDateString() + ")");
                     task_title.Clear();
                     task_description.Clear();
                     load_tasks();
@@ -323,7 +341,9 @@ namespace switch_grid
                 if (start > 0 && end > start)
                 {//start of inner if
                     int task_id = int.Parse(selected.Substring(start, end - start));
+                    string task_title_text = extract_task_title(selected);
                     task_manager.CompleteTask(task_id);
+                    activity_log.LogAction("Task completed: '" + task_title_text + "'");
                     load_tasks();
                 }//end of inner if
             }//end of if
@@ -343,7 +363,9 @@ namespace switch_grid
                 if (start > 0 && end > start)
                 {//start of inner if
                     int task_id = int.Parse(selected.Substring(start, end - start));
+                    string task_title_text = extract_task_title(selected);
                     task_manager.DeleteTask(task_id);
+                    activity_log.LogAction("Task deleted: '" + task_title_text + "'");
                     load_tasks();
                 }//end of inner if
             }//end of if
@@ -352,6 +374,17 @@ namespace switch_grid
                 MessageBox.Show("Please select a task first.");
             }//end of else
         }//end of delete_task
+
+        // pulls the task title out of the formatted tasks_list display string,
+        // e.g. "○ [3] Enable 2FA — Turn on 2FA everywhere | Reminder: ..." -> "Enable 2FA"
+        private string extract_task_title(string display_text)
+        {//start of extract_task_title
+            int bracket_end = display_text.IndexOf(']');
+            int dash_start = display_text.IndexOf('—');
+            if (bracket_end > -1 && dash_start > bracket_end)
+                return display_text.Substring(bracket_end + 1, dash_start - bracket_end - 1).Trim();
+            return "task";
+        }//end of extract_task_title
 
         private void back_to_chat(object sender, RoutedEventArgs e)
         {//start of back_to_chat
@@ -365,6 +398,7 @@ namespace switch_grid
             chats_grid.Visibility = Visibility.Hidden;
             quiz_grid.Visibility = Visibility.Visible;
             quiz_manager.StartNewQuiz(10);
+            activity_log.LogAction("Quiz started - " + quiz_manager.GetTotalQuestions() + " questions");
             quiz_score_text.Visibility = Visibility.Collapsed;
             quiz_next_button.Visibility = Visibility.Collapsed;
             quiz_option_a.Visibility = Visibility.Visible;
@@ -464,6 +498,7 @@ namespace switch_grid
             int total = quiz_manager.GetTotalQuestions();
             quiz_score_text.Visibility = Visibility.Visible;
             quiz_score_text.Text = "Your score: " + score + " / " + total + "\n" + quiz_manager.GetFinalFeedback();
+            activity_log.LogAction("Quiz completed - score " + score + "/" + total);
         }
 
         private void quiz_play_again(object sender, RoutedEventArgs e)
