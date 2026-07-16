@@ -43,4 +43,4 @@ namespace switch_grid
             return builder.ToString().Trim();
         }//end of FormatLog
     }
-}
+} 
